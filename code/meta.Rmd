@@ -1,0 +1,44 @@
+---
+title: "meta"
+output: html_document
+date: "2024-05-30"
+---
+
+## R Markdown
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_libraries, include=FALSE}
+library(knitr)
+library(lubridate)
+library(VIM)
+library(stringr)
+library(psych)
+library(pROC)
+library(dplyr)
+```
+```
+
+## blabla
+
+Partimos de dos datasets, donde tenemos el total de minutos, partidos, puntos, rebotes, asistencias, tapones y robos efectuados por los jugadores de la NBA y las jugadores de la WNBA, que son la liga masuclina y femenina de baloncesto de Estados Unidos. Estos datos corresponden a la temporada 2016-17.
+
+Nuestro objetivo es unificar estas fuentes en un unico dataset, limpiarlo, normalizarlo si es necesario, y establecer visualizaciones que nos permitan obtener información sobre la brecha salarial existente entre ambas ligas.
+
+
+```{r, echo=TRUE}
+# read data
+films <- read.csv("../data/films.csv")
+```
+
+El dataset y el código del mismo esta localizable en la siguiente dirección:
+
+https://github.com/abarreraquintanilla/metacritic_cleaning.git
+
+****
+# Limpieza de datos
+****
+
+El fichero de datos contiene `r nrow(films)` registros y  `r ncol(films)` variables. 
