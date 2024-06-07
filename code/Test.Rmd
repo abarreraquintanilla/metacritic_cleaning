@@ -13,12 +13,11 @@ for (pkg in packages) {
     install.packages(pkg)
   }
 }
-
 library(rstudioapi)
 library(stringr)
 library(DescTools)
 library(FactoMineR)
-
+library(rgl)
 library(scatterplot3d)
 library(ggplot2)
 library(dplyr)
