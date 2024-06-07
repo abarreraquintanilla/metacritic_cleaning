@@ -1,5 +1,5 @@
 # Limpieza y analisis del dato: FILMS from Metacritic
-_En esta práctica hemos limpiado y analizado el dataset generato en la práctica anterior.
+En esta práctica hemos limpiado y analizado el dataset generato en la práctica anterior.
 
 ## Autores ✒️
 
