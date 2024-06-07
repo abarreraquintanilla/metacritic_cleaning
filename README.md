@@ -13,9 +13,9 @@ _Estas instrucciones te permitirán obtener una copia del proyecto en funcionami
 ### Descripción de los archivos del repositorio 📋
 **_Ficheros dentro del folder /code:_**
 
-_* Test.Rmd: Archivo principal de ejecución de código_
+_* pra2_code.Rmd: Archivo principal de ejecución de código_
 
-_* Test.html: Archivo html con el codigo ejecutado._
+_* pra2_code.html: Archivo html con el codigo ejecutado._
 
 **_Ficheros dentro del folder /data:_**
 
