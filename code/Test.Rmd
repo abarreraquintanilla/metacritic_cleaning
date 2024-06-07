@@ -6,31 +6,22 @@ output: html_document
 
 Instalamos y cargamos los paquetes necesarios para la ejecución de nuestro script:
 ```{r setup, echo=TRUE, results='hide'}
-if (!requireNamespace("rstudioapi", quietly = TRUE)) {
-  install.packages("rstudioapi")
-}
+packages <- c("rstudioapi", "dplyr", "DescTools", "FactoMineR", "rgl")
 
-if (!requireNamespace("dplyr", quietly = TRUE)) {
-  install.packages("dplyr")
+for (pkg in packages) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    install.packages(pkg)
+  }
 }
-
-if (!requireNamespace("DescTools", quietly = TRUE)) {
-  install.packages("DescTools")
-}
-if (!requireNamespace("FactoMineR", quietly = TRUE)) {
-  install.packages("FactoMineR")
-}
-
 
 library(rstudioapi)
-library(dplyr)
 library(stringr)
 library(DescTools)
 library(FactoMineR)
-library(rgl)
+
 library(scatterplot3d)
-
-
+library(ggplot2)
+library(dplyr)
 ```
 
 ## Carga de los datos
@@ -45,7 +36,7 @@ setwd(path)
 Leemos el archivo CSV original, teniendo en cuenta que emplea como separador el punto y coma (";") y posee cabecera:
 
 ```{r echo=TRUE}
-dataset <- read.csv("../data/films.csv" ,sep=";")
+dataset <- read.csv(paste0(path, "/data/films.csv") ,sep=";")
 ```
 
 ## Descripción del dataset
@@ -184,14 +175,12 @@ cleanData$user_score %>% table() %>% head()
 cleanData$number_users %>% table() %>% head()
 ```
 
-Para terminar con estos campos, pasaremos 'number_users' de "numeric" a "integer", es decir, cambiarlo de número decimal a número entero, dado que el número de usuarios no debería poder aceptar valores decimales; por otro lado, 'user_score' pasará de "character" a "integer" y multiplicaremos por 10, para dejarlo sobre 100 igual que metascore:
+Para terminar con estos campos, pasaremos 'number_users' de "numeric" a "integer", es decir, cambiarlo de número decimal a número entero, dado que el número de usuarios no debería poder aceptar valores decimales; por otro lado, 'user_score' pasará de "character" a "numeric", lo multiplicaremos por 10 para dejarlo sobre 100 al igual que 'metascore', y se convertirá a "integer" para trabajar con enteros en este campo:
 
 ```{r echo=TRUE}
 cleanData$number_users <- cleanData$number_users %>% as.integer()
-cleanData$user_score   <- cleanData$user_score %>% as.integer()
-cleanData$user_score   <- cleanData$user_score * 10
+cleanData$user_score   <- cleanData$user_score %>% as.numeric() %>% `*`(10) %>% as.integer()
 ```
-
 
 Tras la eliminación de las variables categóricas presentadas en el apartado de "Integración y selección de los datos de interés a analizar", comprobaremos si el resto presentan como valor la cadena vacía (""), y según la frecuencia de dicho valor, nos plantearemos si eliminar dichas filas o sustituirlas por un valor distinto:
 
@@ -199,13 +188,10 @@ Tras la eliminación de las variables categóricas presentadas en el apartado de
 colsToCheck <- c("rating", "duration", "must_see", "genre")
 numberEmpty <- numeric(length(colsToCheck))
 
-# Recorrer cada columna del dataset
 for (i in seq_along(colsToCheck)) {
-  # Verificar si hay valores de cadena vacía en la columna actual
   numberEmpty[i] <- sum(cleanData[[colsToCheck[i]]] == "")
 }
 
-# Mostrar el número de veces que aparece la cadena vacía para cada variable
 names(numberEmpty) <- colsToCheck
 print("Número de cadenas vacías ('') en las columnas categóricas:")
 print(numberEmpty)
@@ -284,11 +270,8 @@ Hemos podido comprobar que la película más corta dura 30 minutos, mientras que
 * Valor 4 (muy larga): 328 <= x <= 776
 
 ```{r echo=TRUE}
-# Utilizamos la función cut() para categorizar la duración de las películas según los límites indicados
 cleanData$duration <- cut(cleanData$duration, breaks = c(30, 93, 105, 121, 328, 776), labels = FALSE, right = FALSE) -1 # -1 para empezar desde 0
 cleanData$duration <- cleanData$duration %>% as.integer()
-
-# Visualizamos la frecuencia de cada valor
 cleanData$duration %>% table()
 ```
 El siguiente campo a analizar es el género, el cual podemos observar que puede presentar muchas combinaciones:
@@ -304,27 +287,25 @@ cat("Número de géneros diferentes: ", cleanData$genre %>% paste(., collapse = 
 ```
 Podemos observar que hay 25 géneros distintos, entre los que se incluyen géneros desconocidos ('Unknow'). Sin embargo, nuestro problema radica en que cada película puede poseer distintos géneros que la definan, así como un número variable de géneros, como se muestra a continuación:
 
+Frecuencia de números de géneros que poseen las películas:
 ```{r echo=TRUE}
-# Generar una tabla de frecuencia
 cleanData$genre %>% strsplit(",") %>% sapply(length) %>% table()
 ```
-
 Se ha decidido crear diferentes columnas dentro del dataset de tipo "boleano" para indicar cada uno de los generos. Lo hacemos comprobando para cada una de las muestras si existe el genero(string) y asignando 0 o 1 en función si lo encuentra o no. Como eran muchos generos, se ha decidido mostrar solo los más frecuentes y el resto asignarlos a "others". 
 Así, podremos analizar con más facilidad sobre este atributo:
 
 ```{r echo=TRUE}
-
-cleanData$drama <- ifelse(grepl("Drama", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$crime <- ifelse(grepl("Crime", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$mystery <- ifelse(grepl("Mystery", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$romance <- ifelse(grepl("Romance", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$adventure <- ifelse(grepl("Adventure", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$biography <- ifelse(grepl("Biography", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$thriller <- ifelse(grepl("Thriller", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$comedy <- ifelse(grepl("Comedy", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$history <- ifelse(grepl("History", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$documentary <- ifelse(grepl("Documentary", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$others <- ifelse(grepl("Action|Game-Show|News|Film-Noir|Western|Musical|Sport|Horror|Sci-Fi|Animation|Family|Action|Fantasy|War|Music", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_drama       <- ifelse(grepl("Drama", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_crime       <- ifelse(grepl("Crime", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_mystery     <- ifelse(grepl("Mystery", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_romance     <- ifelse(grepl("Romance", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_adventure   <- ifelse(grepl("Adventure", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_biography   <- ifelse(grepl("Biography", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_thriller    <- ifelse(grepl("Thriller", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_comedy      <- ifelse(grepl("Comedy", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_history     <- ifelse(grepl("History", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_documentary <- ifelse(grepl("Documentary", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
+cleanData$genre_others      <- ifelse(grepl("Action|Game-Show|News|Film-Noir|Western|Musical|Sport|Horror|Sci-Fi|Animation|Family|Action|Fantasy|War|Music", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 
 ```
 
@@ -336,11 +317,7 @@ cleanData <- cleanData %>% dplyr::select(-genre)
 ```{r echo=TRUE}
 str(cleanData)
 ```
-
-
-## Análisis de los datos
-
-Codificación de la variable objetivo, donde "True" es 1, y "False" será 0:
+El siguiente paso será la codificación de la variable objetivo, donde "True" será 1, y "False" será 0. De esta forma, podemos emplear estos nuevos valores con algoritmos que requieran valores numéricos, entre otras ventajas:
 
 ```{r echo=TRUE}
 cleanData$must_see <- ifelse(cleanData$must_see == "True", 1, 0) %>% as.integer()
@@ -360,10 +337,14 @@ str(cleanData)
 ```
 ```{r echo=TRUE}
 summary(cleanData)
+```
+```{r echo=TRUE}
 head(cleanData)
 ```
 
-## Comprobar normalidad
+## Análisis de los datos
+
+### Comprobación de la normalidad
 
 Comprobamos la normalidad de las variables con qqplot y histogramas:
 
@@ -371,20 +352,21 @@ Comprobamos la normalidad de las variables con qqplot y histogramas:
 par(mfrow=c(2,2))
 for(i in 1:ncol(cleanData)) {
   if (is.numeric(cleanData[,i])){
-    qqnorm(cleanData[,i],main = paste("Normal Q-Q Plot for ",colnames(cleanData)[i]))
+    qqnorm(cleanData[,i],main = paste("Normal Q-Q Plot for",colnames(cleanData)[i]))
     qqline(cleanData[,i],col="red")
     hist(cleanData[,i], 
-      main=paste("Histogram for ", colnames(cleanData)[i]), 
+      main=paste("Histogram for", colnames(cleanData)[i]), 
       xlab=colnames(cleanData)[i], freq = FALSE)
   }
 }
 ``` 
-
 Los resultados del quantile-quantile plot nos indica que algunas variables pueden ser candidatas a la normalización si es necesario. Por ejemplo, las variables tipo factor (1/0) no tiene sentido normalizarlas y las codificadas tampoco.
 
 Entonces nos quedariamos con: year, metascore, user_score, number_critics y number_users.
 
-Para revisar si las variables estan normalizadas se aplica el test de Shapiro Wilk en cada variables numérica de las antes mencionadas:
+### Prueba de contraste de hipótesis de Shapiro-Wilk
+
+Para revisar si las variables están normalizadas se aplica el test de Shapiro-Wilk en cada variables numérica de las antes mencionadas:
 
 ```{r ,eval=TRUE,echo=TRUE}
 shapiro.test(cleanData$year)
@@ -401,14 +383,13 @@ shapiro.test(cleanData$user_score)
 shapiro.test(cleanData$number_critics)
 ```
 
-
 ```{r ,eval=TRUE,echo=TRUE}
 shapiro.test(cleanData$number_users)
 ```
 
 El test nos indica que ninguna variable esta normalizada, ya que el p-valor es inferior al coeficiente 0.05, por lo que se puede rechazar la hipotesis nula y entender que no es normal.
 
-Que no sea normal no quiere decir que no pueda ser normalizable, ya que segun el teorema del limite central al tener mas de 30 elementos en las observaciones podemos aproximarla como una distribución normal de media 0 y desviación estandard 1.
+Que no sea normal no quiere decir que no pueda ser normalizable, ya que según el teorema del límite central, al tener más de 30 elementos en las observaciones, podemos aproximarla como una distribución normal de media 0 y desviación estándar 1.
 
 ```{r ,eval=TRUE,echo=TRUE}
 year.norm <- BoxCox(cleanData$year, lambda = BoxCoxLambda(cleanData$year))
@@ -432,41 +413,37 @@ qqline(metascore.norm, col=2)
 ```
 Tampoco obtenemos mejores resultados de los ya tratados.
 
-## Transformación de datos normalizados
-
 Se pueden probar tantas transformaciones como se desee, pero en este caso supondremos que los datos no se pueden normalizar y, por tanto, los analizaremos con pruebas que no presuponen estas caracteristicas.
 
-En referencia a la homogeneidad de la varianza, dado que los datos no son normales, usaremos el método de Fligner-Killeen, para comparar la varianza entre las puntuaciones y las variables factor:
+### Prueba de contraste de hipótesis de Fligner-Killeeen
 
+En referencia a la homogeneidad de la varianza, dado que los datos no son normales, usaremos el método de Fligner-Killeen, para comparar la varianza entre las puntuaciones y las variables factor:
 
 ```{r ,eval=TRUE,echo=TRUE}
 fligner.test(metascore ~ must_see, data = cleanData)
 ```
 Para metascore, la varianza es similar entre pelis buenas y malas.
 
-
 ```{r ,eval=TRUE,echo=TRUE}
 fligner.test(metascore ~ rating, data = cleanData)
 ```
 En cambio, es diferente entre los grupos de rating.
 
+### Prueba de contraste de hipótesis de Wilcoxon
 
-## Aplicación de pruebas estadisticas
+Dado que los datos a analizar no presentan una distribución normal, las pruebas estadísticas para analizar y comparar los diferentes grupos deberán ser no paramétricas. Así, para los datos como los géneros que son booleanos, se aplica el test de Wilcoxon:
 
-Dado que los datos a analizar no presentan una distribución normal, las pruebas estadísticas para analizar y comparar los diferentes grupos deberán ser no paramétricas.
-
-Así, para los datos como los generos que son boleanos, se aplica el test de Wilcoxon:
 Probamos con drama:
 ```{r ,eval=TRUE,echo=TRUE}
-wilcox.test(cleanData$metascore~cleanData$drama)
+wilcox.test(cleanData$metascore~cleanData$genre_drama)
 ```
 Probamos con comedy:
 ```{r ,eval=TRUE,echo=TRUE}
-wilcox.test(cleanData$metascore~cleanData$comedy)
+wilcox.test(cleanData$metascore~cleanData$genre_comedy)
 ```
 Por último, probamos con crime:
 ```{r ,eval=TRUE,echo=TRUE}
-wilcox.test(cleanData$metascore~cleanData$crime)
+wilcox.test(cleanData$metascore~cleanData$genre_crime)
 ```
 Podemos observar con la primera, que la diferencia entre los grupos es significativa (p<0.05). Es decir, el factor metascore es diferente cuando es la pelicula de drama o no, puede haber una relación.
 En cambio, cuando hemos aplicado el mismo modelo, pero con comedy y crime, vemos el factor p>0.05.
@@ -480,14 +457,13 @@ Son estadisticamente diferentes entre ellos.
 Vamos a comprobar la correlación, a partir del método Spearman:
 
 ```{r ,eval=TRUE,echo=TRUE}
-cor.test(cleanData$drama,cleanData$must_see,method="spearman")
-
+cor.test(cleanData$genre_drama, cleanData$must_see,method="spearman")
 ```
 No vemos mucha correlación.
 
-## Modelo Supervisado
+### Modelo Supervisado
 
-Vamos a probar con una regresión lineal simple, comparando la variable factor must_see con el numero de criticos:
+Vamos a probar con una regresión lineal simple, comparando la variable factor must_see con el número de criticos:
 
 ```{r ,eval=TRUE,echo=TRUE}
 data_glm<-cleanData[]
@@ -498,17 +474,31 @@ set.seed(1)
 index_train<-sample(1:nrow(data_glm),size = ntrain)
 train<-data_glm[index_train,]
 test<-data_glm[-index_train,]
-modelo<-lm(formula = must_see ~ number_critics, data=train)
+modelo<-lm(formula = must_see ~ ., data=train)
 summary(modelo)
 ```
+```{r , eval=TRUE,echo=TRUE}
+cols <- setdiff(names(train), "must_see")
 
-# Modelo no supervisado
+par(mfrow = c(2, 3)) 
 
-Usaremos clusters, para ello primero aplicaremos el codo de Jambú par aescoger el número de clústeres que minimice la distancia intra-cluster:
+for (col in cols) {
+  plot(train[, col], train$must_see, main = paste0(col, " vs must_see"), xlab = col, ylab = "must_see", col = "blue", pch = 20)
+  abline(lm(train$must_see ~ train[, col]), col = "red")
+}
+```
+
+Gracias a estos gráficos, podemos determinar qué tipo de correlación posee cada campo con 'must_see'. Por ejemplo, es lógico que, a mayor 'metascore', es decir, a mayor calificación de los críticos de la página de metacritic, mayor sea la probabilidad de que se etiquete como 'must_see', llegando al caso de que, si la película posee una puntuación de aproximadamente 95 o más, es casi seguro que reciba tal clasificación. 
+
+Otros casos que nos han parecido interesantes han sido que, conforme avancen los años, 'must_see' se reduzca; en otras palabras, existe una correlación negativa con 'year'. Esto puede deberse a que la página ha recogido solo las mejores películas de los primeros años de cinematografía, que la calidad de las películas se haya reducido con el tiempo, que la crítica sea más "dura" con las nuevas películas, que dicha calificación necesite un periodo mínimo para poder recomendarse con esta etiqueta, etc.
+
+### Modelo no supervisado
+
+Usaremos clusters, para ello primero aplicaremos el codo de Jambú par escoger el número de clústeres que minimice la distancia intra-cluster:
 ```{r ,eval=TRUE,echo=TRUE}
 dataset_clu <- cleanData %>% dplyr::select(number_critics, must_see)
-
 ```
+
 ```{r ,eval=TRUE,echo=TRUE}
 ss = 1:20
 for( i in 1:20){
@@ -518,46 +508,50 @@ for( i in 1:20){
 plot(1:20, ss, xlab = "Clusters", ylab = "Distancia intra clusters total",type = "b")
 ```
 
-El K=4 o 5, a partir de ahí los cambios no son significativos. 
+Los valores k=4 o k=5 serían una buena elección, dado que, a partir de ellos, los cambios no son significativos.
+
 Quitamos las variables factor:
 ```{r ,eval=TRUE,echo=TRUE}
 summary(cleanData)
-
 ```
 ```{r ,eval=TRUE,echo=TRUE}
-
 pairs(cleanData[,-c(4,9,10,11,12,13,14,15,16,17,18,19)], col=cleanData$must_see)
-
 ```
+
 ```{r ,eval=TRUE,echo=TRUE}
-
 pca = PCA(cleanData[,-c(4,9,10,11,12,13,14,15,16,17,18,19)])
-
-
 ```
+
 
 Al realizar el gráfico 2 a 2 de las variables del set de datos, y además, aplicando un análisis de componentes principales, nos podemos dar cuenta, que los datos parecen no ser separables. Por lo tanto, no existe alguna manera de detectar con una precisión aceptable, los elementos de una clase o de otra.
 
 Aplicaremos un modelo de K-Medias, para observar los resultados y analizar el rendimiento luego, con el fin de dar soporte a lo anterior. Pero solo con las variables year, metascore y number_critics, porque las otras contienen ceros y este modelo no lo soporta:
 
 ```{r ,eval=TRUE,echo=TRUE}
-
 cleanData.model = kmeans(cleanData[,-c(2,4,3,6,8,9,10,11,12,13,14,15,16,17,18,19)], centers=2, iter.max=20)
 plot(cleanData[,-c(2,3,4,6,8,9,10,11,12,13,14,15,16,17,18,19)], col=cleanData.model$cluster)
-
 ```
+
+Aquí se observa, por ejemplo, que cuanto más nueva es la película mayor es el número de críticos que la puntúan. Tiene sentido, ya que en las antiguas seguramente no había tantas opiniones informatizadas.
 
 Evaluación del modelo:
 
 ```{r ,eval=TRUE,echo=TRUE}
-
 cleanData.conf = table(cleanData$must_see, cleanData.model$cluster, dnn=c("MustSee", "Cluster"))
-cleanData.conf = fix.conf.table(cleanData.conf)
 cleanData.conf
 ```
+La tabla de contingencia (o matrix de confusión) proporciona información detallada sobre cómo las predicciones del modelo se comparan con los valores reales de la variable objetivo 'musts_see'. Por ejemplo, la celda (0, 1) nos dice que el modelo clasificó correctamente 1057 observaciones como pertenecientes al clúster 1 cuando su valor real en la variable objetivo era 0; sin embargo, la celda (0, 2) muestra que el modelo clasificó erróneamente 235 observaciones como pertenecientes al clúster 2 cuando su valor real era 0. 
+
+De manera similar, la celda (1, 1) indica que el modelo clasificó incorrectamente 960 observaciones como pertenecientes al clúster 1 cuando su valor real era 1, indicando que tenía la etiqueta "Must See", y la celda (1, 2) señala que el modelo acertó al clasificar 261 observaciones como pertenecientes al clúster 2 cuando su valor real era 1. 
+
+Por tanto, podemos decir que el modelo tiene una buena precisión, pero es bastante mejorable respecto a las instancias negativas.
 
 ## Conclusiones 
 
-TODO:
-Explicación de los resultados obtenidos
+Hemos podido comprobar que a mayor metascore mayor probabilidad de must_see, que es esperable y cuando mayor número de usuarios que han puntuado también mayor must_see.
 
+Otro caso curioso, cuanto más dura la película hay una correlación positiva, probablemente sea más buena la película. 
+
+Y respecto a los géneros, si la película es de género drama, crimen, misterio, aventura o thriller tiene una ligera correlación positiva, mayor que en el resto. En cambio, en los documentales es negativa. 
+
+Y por último, el año, presenta correlación negativa, en cuanto más nueva sea la película menos probabilidad hay de que sea un must see.
