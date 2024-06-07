@@ -13,20 +13,16 @@ _Estas instrucciones te permitirán obtener una copia del proyecto en funcionami
 ### Descripción de los archivos del repositorio 📋
 **_Ficheros dentro del folder /code:_**
 
-_* chromedriver.exe: Fichero ejecutable con el driver de Chrome_
+_* Test.Rmd: Archivo principal de ejecución de código_
 
-_* requirements.txt: Fichero de texto con las librerias necesarias._
-
-_* main.py: Archivo principal del proceso de scraping_
-
-_* demo.py: Archivo principal para DEMO/TESTEO  del proceso de scraping._
+_* Test.html: Archivo html con el codigo ejecutado._
 
 **_Ficheros dentro del folder /data:_**
 
-_* films.csv: Archivo CSV con el resultado del proceso_
+_* films.csv: Archivo CSV origen_
 
-_* films_demo.csv: Archivo CSV con el resultado del proceso en modo DEMO_
+_* films_out.csv: Archivo CSV con el resultado del proceso de limpieza_
 
 ## Dataset 📦
 
-_Puede chequear el dataset en la siguiente dirección:_
+_Puede chequear el dataset de salida en la siguiente dirección:_
