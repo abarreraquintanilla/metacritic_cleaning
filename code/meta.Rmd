@@ -1,6 +1,8 @@
 ---
 title: "meta"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 date: "2024-05-30"
 ---
 
@@ -10,16 +12,7 @@ date: "2024-05-30"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r load_libraries, include=FALSE}
-library(knitr)
-library(lubridate)
-library(VIM)
-library(stringr)
-library(psych)
-library(pROC)
-library(dplyr)
-```
-```
+
 
 ## blabla
 
@@ -30,7 +23,14 @@ Nuestro objetivo es unificar estas fuentes en un unico dataset, limpiarlo, norma
 
 ```{r, echo=TRUE}
 # read data
-films <- read.csv("../data/films.csv")
+films <- read.csv("../data/films.csv" ,sep=";")
+
+head(films)
+
+
+summary(films)
+
+
 ```
 
 El dataset y el código del mismo esta localizable en la siguiente dirección:
@@ -42,3 +42,33 @@ https://github.com/abarreraquintanilla/metacritic_cleaning.git
 ****
 
 El fichero de datos contiene `r nrow(films)` registros y  `r ncol(films)` variables. 
+
+
+```{r, echo=TRUE}
+films<-films[,-14]
+summary(films)
+```
+
+Vemos rápidamente que tenemos 24 registros sin la variable “year” y 488 de la variable “number_users”:
+
+
+```{r, echo=TRUE}
+df1<-data.frame(films)
+
+colSums(is.na(df1)) 
+```
+```{r, echo=TRUE}
+df1<-data.frame(films)
+df1 <- df1[!is.na(df1$year),]
+summary(df1)
+```
+
+```{r, echo=TRUE}
+
+library(stringr)
+sum(str_detect(df1$rating, 'Not Rated')) > 0
+
+sum(films$rating == 'Not Rated')
+sum(films$rating == 'Unrated')
+sum(films$title == '')
+```
