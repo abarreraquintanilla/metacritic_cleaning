@@ -21,7 +21,7 @@ _* Test.html: Archivo html con el codigo ejecutado._
 
 _* films.csv: Archivo CSV origen_
 
-_* films_out.csv: Archivo CSV con el resultado del proceso de limpieza_
+_* films_clean.csv: Archivo CSV con el resultado del proceso de limpieza_
 
 ## Dataset 📦
 
