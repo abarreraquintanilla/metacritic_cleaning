@@ -326,7 +326,7 @@ str(cleanData)
 Indentificación y tratamiento de valores extremos:
 
 ```{r echo=TRUE}
-g_caja<-boxplot(cleanData$duration, col="skyblue", frame.plot=F)
+g_caja<-boxplot(cleanData$duration, col="skyblue")
 
 ```
 
@@ -365,6 +365,62 @@ head(cleanData)
 
 TODO: 
 Normalización de los datos numéricos (casi todos al final de la limpieza)
+```{r echo=TRUE}
+par(mfrow=c(2,2))
+for(i in 1:ncol(cleanData)) {
+  if (is.numeric(cleanData[,i])){
+    qqnorm(cleanData[,i],main = paste("Normal Q-Q Plot for ",colnames(cleanData)[i]))
+    qqline(cleanData[,i],col="red")
+    hist(cleanData[,i], 
+      main=paste("Histogram for ", colnames(cleanData)[i]), 
+      xlab=colnames(cleanData)[i], freq = FALSE)
+  }
+}
+```
+Los resultados del quantile-quantile plot nos indica que las variables pueden ser candidatas a la normalización si es necesario.
+
+Para revisar si las variables estan normalizadas se aplica el test de Shapiro Wilk en cada variables numérica
+
+```{r ,eval=TRUE,echo=TRUE}
+shapiro.test(cleanData$year)
+```
+```{r ,eval=TRUE,echo=TRUE}
+shapiro.test(cleanData$rating)
+```
+
+```{r ,eval=TRUE,echo=TRUE}
+shapiro.test(cleanData$duration)
+```
+
+```{r ,eval=TRUE,echo=TRUE}
+shapiro.test(cleanData$must_see)
+```
+
+
+```{r ,eval=TRUE,echo=TRUE}
+shapiro.test(cleanData$metascore)
+```
+
+```{r ,eval=TRUE,echo=TRUE}
+shapiro.test(cleanData$user_score)
+```
+
+```{r ,eval=TRUE,echo=TRUE}
+shapiro.test(cleanData$number_critics)
+```
+
+```{r ,eval=TRUE,echo=TRUE}
+shapiro.test(cleanData$number_users)
+```
+El test nos indica que ninguna variable esta normalizada, ya que el p-valor es inferior al coeficiente 0.05, por lo que se puede rechazar la hipotesis nula y entender que no es normal.
+
+Que no sea normal no quiere decir que no pueda ser normalizable, ya que segun el teorema del limite central al tener mas de 30 elementos en las observaciones podemos aproximarla como una distribución normal de media 0 y desviación estandard 1.
+
+## Transformación de datos normalizados
+
+
+## Aplicación de pruebas estadisticas
+
 Un modelo supervisado
 Un modelo no supervisado
 
