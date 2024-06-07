@@ -13,6 +13,7 @@ for (pkg in packages) {
     install.packages(pkg)
   }
 }
+
 library(rstudioapi)
 library(stringr)
 library(DescTools)
@@ -35,7 +36,7 @@ setwd(path)
 Leemos el archivo CSV original, teniendo en cuenta que emplea como separador el punto y coma (";") y posee cabecera:
 
 ```{r echo=TRUE}
-dataset <- read.csv(paste0(path, "/data/films.csv") ,sep=";")
+dataset <- read.csv(paste0(path, "/data/films.csv"), sep=";")
 ```
 
 ## Descripción del dataset
@@ -339,6 +340,11 @@ summary(cleanData)
 ```
 ```{r echo=TRUE}
 head(cleanData)
+```
+
+El dataset con los datos ya limpios se exportará como un nuevo CSV, como se muestra a continuación:
+```{r echo=TRUE}
+write.csv2(cleanData, file = paste0(path, "/data/films_clean.csv"), row.names = FALSE)
 ```
 
 ## Análisis de los datos

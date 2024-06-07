@@ -391,7 +391,7 @@ directorio de trabajo</p>
 setwd(path)</code></pre>
 <p>Leemos el archivo CSV original, teniendo en cuenta que emplea como
 separador el punto y coma (“;”) y posee cabecera:</p>
-<pre class="r"><code>dataset &lt;- read.csv(paste0(path, &quot;/data/films.csv&quot;) ,sep=&quot;;&quot;)</code></pre>
+<pre class="r"><code>dataset &lt;- read.csv(paste0(path, &quot;/data/films.csv&quot;), sep=&quot;;&quot;)</code></pre>
 </div>
 <div id="descripción-del-dataset" class="section level2">
 <h2>Descripción del dataset</h2>
@@ -995,6 +995,9 @@ dataset y las eliminaremos, como se puede apreciar a continuación:</p>
 ## 4                 0            0
 ## 5                 0            0
 ## 6                 0            0</code></pre>
+<p>El dataset con los datos ya limpios se exportará como un nuevo CSV,
+como se muestra a continuación:</p>
+<pre class="r"><code>write.csv2(cleanData, file = paste0(path, &quot;/data/films_clean.csv&quot;), row.names = FALSE)</code></pre>
 </div>
 <div id="análisis-de-los-datos" class="section level2">
 <h2>Análisis de los datos</h2>
