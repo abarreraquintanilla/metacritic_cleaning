@@ -294,40 +294,45 @@ Podemos observar que hay 25 géneros distintos, entre los que se incluyen géner
 # Generar una tabla de frecuencia
 cleanData$genre %>% strsplit(",") %>% sapply(length) %>% table()
 ```
-## TODO
-Decidir qué hacer con el género
-Comprobar si hay valores extremos (por ejemplo, en 'duration' ya se ve que hay 4 peliculas) con histogramas para visualizarlo
+
+Se ha decidido crear diferentes columnas dentro del dataset de tipo "boleano" para indicar cada uno de los generos. Lo hacemos comprobando para cada una de las muestras si existe el genero(string) y asignando 0 o 1 en función si lo encuentra o no. Como eran muchos generos, se ha decidido mostrar solo los más frecuentes y el resto asignarlos a "others". 
+Así, podremos analizar con más facilidad sobre este atributo:
 
 ```{r echo=TRUE}
-cleanData$action <- ifelse(grepl("Action", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-
 
 cleanData$drama <- ifelse(grepl("Drama", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 cleanData$crime <- ifelse(grepl("Crime", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 cleanData$mystery <- ifelse(grepl("Mystery", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 cleanData$romance <- ifelse(grepl("Romance", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 cleanData$adventure <- ifelse(grepl("Adventure", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$war <- ifelse(grepl("War", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 cleanData$biography <- ifelse(grepl("Biography", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 cleanData$thriller <- ifelse(grepl("Thriller", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 cleanData$comedy <- ifelse(grepl("Comedy", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$musical <- ifelse(grepl("Musical|Music", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$family <- ifelse(grepl("Family", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$western <- ifelse(grepl("Western", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$sport <- ifelse(grepl("Sport", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$music <- ifelse(grepl("Music", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$scifi <- ifelse(grepl("Sci-Fi", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$filmnoir <- ifelse(grepl("Film-Noir", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$animation <- ifelse(grepl("Animation", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 cleanData$history <- ifelse(grepl("History", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$horror <- ifelse(grepl("Horror", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$fantasy <- ifelse(grepl("Fantasy", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$music <- ifelse(grepl("Music", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-cleanData$scifi <- ifelse(grepl("Sci-Fi|Sci", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 cleanData$documentary <- ifelse(grepl("Documentary", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
-
+cleanData$others <- ifelse(grepl("Action|Game-Show|News|Film-Noir|Western|Musical|Sport|Horror|Sci-Fi|Animation|Family|Action|Fantasy|War|Music", cleanData$genre) == "TRUE", 1, 0) %>% as.integer()
 
 ```
+
+A continuación eliminamos la columna "genre" porque ya no nos hace falta:
+```{r echo=TRUE}
+cleanData <- cleanData %>% select(-genre)
+```
+
+```{r echo=TRUE}
+str(cleanData)
+```
+
+Indentificación y tratamiento de valores extremos:
+
+```{r echo=TRUE}
+g_caja<-boxplot(cleanData$duration, col="skyblue", frame.plot=F)
+
+```
+
+Comprobar si hay valores extremos (por ejemplo, en 'duration' ya se ve que hay 4 peliculas) con histogramas para visualizarlo
+
+
 
 
 ### REVISAR
@@ -352,6 +357,7 @@ str(cleanData)
 ```
 ```{r echo=TRUE}
 summary(cleanData)
+head(cleanData)
 ```
 
 
