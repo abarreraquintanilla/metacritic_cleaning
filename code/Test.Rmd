@@ -14,9 +14,23 @@ if (!requireNamespace("dplyr", quietly = TRUE)) {
   install.packages("dplyr")
 }
 
+if (!requireNamespace("DescTools", quietly = TRUE)) {
+  install.packages("DescTools")
+}
+if (!requireNamespace("FactoMineR", quietly = TRUE)) {
+  install.packages("FactoMineR")
+}
+
+
 library(rstudioapi)
 library(dplyr)
 library(stringr)
+library(DescTools)
+library(FactoMineR)
+library(rgl)
+library(scatterplot3d)
+
+
 ```
 
 ## Carga de los datos
@@ -129,7 +143,7 @@ Si hablamos de los directores y escritores implicados, hemos aislado primero el 
 Por tanto, dada la gran cantidad de distintos valores presentes en cada una de estas columnas, las eliminaremos, de forma que faciliten nuestro uso:
 
 ```{r echo=TRUE}
-dataset <- dataset %>% select(-title, -studio, -director, -writer, -summary)
+dataset <- dataset %>% dplyr::select(-title, -studio, -director, -writer, -summary)
 dataset %>% str()
 ```
 
@@ -316,26 +330,15 @@ cleanData$others <- ifelse(grepl("Action|Game-Show|News|Film-Noir|Western|Musica
 
 A continuación eliminamos la columna "genre" porque ya no nos hace falta:
 ```{r echo=TRUE}
-cleanData <- cleanData %>% select(-genre)
+cleanData <- cleanData %>% dplyr::select(-genre)
 ```
 
 ```{r echo=TRUE}
 str(cleanData)
 ```
 
-Indentificación y tratamiento de valores extremos:
 
-```{r echo=TRUE}
-g_caja<-boxplot(cleanData$duration, col="skyblue")
-
-```
-
-Comprobar si hay valores extremos (por ejemplo, en 'duration' ya se ve que hay 4 peliculas) con histogramas para visualizarlo
-
-
-
-
-### REVISAR
+## Análisis de los datos
 
 Codificación de la variable objetivo, donde "True" es 1, y "False" será 0:
 
@@ -360,11 +363,10 @@ summary(cleanData)
 head(cleanData)
 ```
 
+## Comprobar normalidad
 
-## Análisis de los datos
+Comprobamos la normalidad de las variables con qqplot y histogramas:
 
-TODO: 
-Normalización de los datos numéricos (casi todos al final de la limpieza)
 ```{r echo=TRUE}
 par(mfrow=c(2,2))
 for(i in 1:ncol(cleanData)) {
@@ -376,27 +378,17 @@ for(i in 1:ncol(cleanData)) {
       xlab=colnames(cleanData)[i], freq = FALSE)
   }
 }
-```
-Los resultados del quantile-quantile plot nos indica que las variables pueden ser candidatas a la normalización si es necesario.
+``` 
 
-Para revisar si las variables estan normalizadas se aplica el test de Shapiro Wilk en cada variables numérica
+Los resultados del quantile-quantile plot nos indica que algunas variables pueden ser candidatas a la normalización si es necesario. Por ejemplo, las variables tipo factor (1/0) no tiene sentido normalizarlas y las codificadas tampoco.
+
+Entonces nos quedariamos con: year, metascore, user_score, number_critics y number_users.
+
+Para revisar si las variables estan normalizadas se aplica el test de Shapiro Wilk en cada variables numérica de las antes mencionadas:
 
 ```{r ,eval=TRUE,echo=TRUE}
 shapiro.test(cleanData$year)
 ```
-```{r ,eval=TRUE,echo=TRUE}
-shapiro.test(cleanData$rating)
-```
-
-```{r ,eval=TRUE,echo=TRUE}
-shapiro.test(cleanData$duration)
-```
-
-```{r ,eval=TRUE,echo=TRUE}
-shapiro.test(cleanData$must_see)
-```
-
-
 ```{r ,eval=TRUE,echo=TRUE}
 shapiro.test(cleanData$metascore)
 ```
@@ -409,29 +401,160 @@ shapiro.test(cleanData$user_score)
 shapiro.test(cleanData$number_critics)
 ```
 
+
 ```{r ,eval=TRUE,echo=TRUE}
 shapiro.test(cleanData$number_users)
 ```
+
 El test nos indica que ninguna variable esta normalizada, ya que el p-valor es inferior al coeficiente 0.05, por lo que se puede rechazar la hipotesis nula y entender que no es normal.
 
 Que no sea normal no quiere decir que no pueda ser normalizable, ya que segun el teorema del limite central al tener mas de 30 elementos en las observaciones podemos aproximarla como una distribución normal de media 0 y desviación estandard 1.
 
+```{r ,eval=TRUE,echo=TRUE}
+year.norm <- BoxCox(cleanData$year, lambda = BoxCoxLambda(cleanData$year))
+shapiro.test(year.norm)
+```
+```{r ,eval=TRUE,echo=TRUE}
+qqnorm(year.norm)
+qqline(year.norm, col=2)
+```
+
+En el caso de year, no mejora nada.
+
+Vamos a probar con metascore:
+```{r ,eval=TRUE,echo=TRUE}
+metascore.norm <- BoxCox(cleanData$user_score, lambda = BoxCoxLambda(cleanData$user_score))
+shapiro.test(metascore.norm)
+```
+```{r ,eval=TRUE,echo=TRUE}
+qqnorm(metascore.norm)
+qqline(metascore.norm, col=2)
+```
+Tampoco obtenemos mejores resultados de los ya tratados.
+
 ## Transformación de datos normalizados
+
+Se pueden probar tantas transformaciones como se desee, pero en este caso supondremos que los datos no se pueden normalizar y, por tanto, los analizaremos con pruebas que no presuponen estas caracteristicas.
+
+En referencia a la homogeneidad de la varianza, dado que los datos no son normales, usaremos el método de Fligner-Killeen, para comparar la varianza entre las puntuaciones y las variables factor:
+
+
+```{r ,eval=TRUE,echo=TRUE}
+fligner.test(metascore ~ must_see, data = cleanData)
+```
+Para metascore, la varianza es similar entre pelis buenas y malas.
+
+
+```{r ,eval=TRUE,echo=TRUE}
+fligner.test(metascore ~ rating, data = cleanData)
+```
+En cambio, es diferente entre los grupos de rating.
 
 
 ## Aplicación de pruebas estadisticas
 
-Un modelo supervisado
-Un modelo no supervisado
+Dado que los datos a analizar no presentan una distribución normal, las pruebas estadísticas para analizar y comparar los diferentes grupos deberán ser no paramétricas.
 
-(Representación visual en todo momento de los resultados)
+Así, para los datos como los generos que son boleanos, se aplica el test de Wilcoxon:
+Probamos con drama:
+```{r ,eval=TRUE,echo=TRUE}
+wilcox.test(cleanData$metascore~cleanData$drama)
+```
+Probamos con comedy:
+```{r ,eval=TRUE,echo=TRUE}
+wilcox.test(cleanData$metascore~cleanData$comedy)
+```
+Por último, probamos con crime:
+```{r ,eval=TRUE,echo=TRUE}
+wilcox.test(cleanData$metascore~cleanData$crime)
+```
+Podemos observar con la primera, que la diferencia entre los grupos es significativa (p<0.05). Es decir, el factor metascore es diferente cuando es la pelicula de drama o no, puede haber una relación.
+En cambio, cuando hemos aplicado el mismo modelo, pero con comedy y crime, vemos el factor p>0.05.
 
-Enunciado:
-"1.Aplica un modelo supervisado y uno no supervisado a los datos y
-comenta los resultados obtenidos.
-2.Aplica una prueba por contraste de hipótesis. Ten en cuenta que algunas
-de estas pruebas requieren verificar previamente la normalidad y
-homocedasticidad de los datos"
+El test equivalente cuando se tienen 3 o más grupos de datos, como el caso de rating o duration, es el test de Kruskal-Wallis:
+```{r ,eval=TRUE,echo=TRUE}
+kruskal.test(cleanData$metascore~cleanData$rating)
+```
+Son estadisticamente diferentes entre ellos.
+
+Vamos a comprobar la correlación, a partir del método Spearman:
+
+```{r ,eval=TRUE,echo=TRUE}
+cor.test(cleanData$drama,cleanData$must_see,method="spearman")
+
+```
+No vemos mucha correlación.
+
+## Modelo Supervisado
+
+Vamos a probar con una regresión lineal simple, comparando la variable factor must_see con el numero de criticos:
+
+```{r ,eval=TRUE,echo=TRUE}
+data_glm<-cleanData[]
+
+ntrain <- nrow(data_glm)*0.8
+ntest <- nrow(data_glm)*0.2
+set.seed(1)
+index_train<-sample(1:nrow(data_glm),size = ntrain)
+train<-data_glm[index_train,]
+test<-data_glm[-index_train,]
+modelo<-lm(formula = must_see ~ number_critics, data=train)
+summary(modelo)
+```
+
+# Modelo no supervisado
+
+Usaremos clusters, para ello primero aplicaremos el codo de Jambú par aescoger el número de clústeres que minimice la distancia intra-cluster:
+```{r ,eval=TRUE,echo=TRUE}
+dataset_clu <- cleanData %>% dplyr::select(number_critics, must_see)
+
+```
+```{r ,eval=TRUE,echo=TRUE}
+ss = 1:20
+for( i in 1:20){
+  modelo = kmeans(x = dataset_clu, centers = i, iter.max = 20)
+  ss[[i]] = modelo$tot.withinss
+}
+plot(1:20, ss, xlab = "Clusters", ylab = "Distancia intra clusters total",type = "b")
+```
+
+El K=4 o 5, a partir de ahí los cambios no son significativos. 
+Quitamos las variables factor:
+```{r ,eval=TRUE,echo=TRUE}
+summary(cleanData)
+
+```
+```{r ,eval=TRUE,echo=TRUE}
+
+pairs(cleanData[,-c(4,9,10,11,12,13,14,15,16,17,18,19)], col=cleanData$must_see)
+
+```
+```{r ,eval=TRUE,echo=TRUE}
+
+pca = PCA(cleanData[,-c(4,9,10,11,12,13,14,15,16,17,18,19)])
+
+
+```
+
+Al realizar el gráfico 2 a 2 de las variables del set de datos, y además, aplicando un análisis de componentes principales, nos podemos dar cuenta, que los datos parecen no ser separables. Por lo tanto, no existe alguna manera de detectar con una precisión aceptable, los elementos de una clase o de otra.
+
+Aplicaremos un modelo de K-Medias, para observar los resultados y analizar el rendimiento luego, con el fin de dar soporte a lo anterior. Pero solo con las variables year, metascore y number_critics, porque las otras contienen ceros y este modelo no lo soporta:
+
+```{r ,eval=TRUE,echo=TRUE}
+
+cleanData.model = kmeans(cleanData[,-c(2,4,3,6,8,9,10,11,12,13,14,15,16,17,18,19)], centers=2, iter.max=20)
+plot(cleanData[,-c(2,3,4,6,8,9,10,11,12,13,14,15,16,17,18,19)], col=cleanData.model$cluster)
+
+```
+
+Evaluación del modelo:
+
+```{r ,eval=TRUE,echo=TRUE}
+
+cleanData.conf = table(cleanData$must_see, cleanData.model$cluster, dnn=c("MustSee", "Cluster"))
+cleanData.conf = fix.conf.table(cleanData.conf)
+cleanData.conf
+```
 
 ## Conclusiones 
 
